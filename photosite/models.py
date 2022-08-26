@@ -2,12 +2,13 @@ from django.db import models
 
 # Create your models here.
 
-class Contact(models.Model):
+class Message(models.Model):
+    message_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
     phone = models.IntegerField(default=0)
-    email = models.CharField(max_length=50)
+    email = models.EmailField(max_length = 254)
     message = models.CharField(max_length=200)
-    # pub_date = models.DateTimeField('date published')
+    date = models.DateTimeField()
 
 class Categories(models.Model):
     name = models.CharField(max_length=50)
