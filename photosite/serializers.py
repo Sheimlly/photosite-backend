@@ -15,4 +15,4 @@ class CategoriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Categories 
-        fields = ('name', 'active')
+        fields = ('category_id', 'name', 'active')

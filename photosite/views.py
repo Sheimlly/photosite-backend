@@ -18,36 +18,7 @@ import datetime
 from .models import Message
 from .serializers import *
 
-@api_view(['POST'])
-def add_message(request):
-    fixed_request_data = request.data.copy()
-    fixed_request_data.update({'date': datetime.datetime.now()})
-
-    serializer = MessageSerializer(data=fixed_request_data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['GET'])
-def messages_list(request):
-    data = Message.objects.all()
-
-    serializer = MessageSerializer(data, context={'request': request}, many=True)
-
-    return Response(serializer.data)
-
-@api_view(['DELETE'])
-def messages_detail(request, pk):
-    try:
-        message = Message.objects.get(pk=pk)
-    except Student.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-    message.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
-
+# Get token
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
@@ -66,7 +37,43 @@ def login(request):
                     status=HTTP_200_OK)
 
 
+# Handle messages
+@api_view(['POST'])
+@permission_classes((AllowAny,))
+def add_message(request):
+    fixed_request_data = request.data.copy()
+    fixed_request_data.update({'date': datetime.datetime.now()})
+
+    serializer = MessageSerializer(data=fixed_request_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['GET'])
+def messages_list(request):
+    data = Message.objects.all()
+
+    serializer = MessageSerializer(data, context={'request': request}, many=True)
+
+    return Response(serializer.data)
+
+@csrf_exempt
+@api_view(['DELETE'])
+def messages_detail(request, pk):
+    try:
+        message = Message.objects.get(pk=pk)
+    except message.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    message.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Handle categories
 @api_view(["GET"])
+@permission_classes((AllowAny,))
 def categories_list(request):
     data = Categories.objects.all()
 
@@ -74,11 +81,36 @@ def categories_list(request):
 
     return Response(serializer.data)
 
-    
 @csrf_exempt
 @api_view(["POST"])
 def add_category(request):
     serializer = CategoriesSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['DELETE'])
+def delete_category(request, pk):
+    try:
+        category = Categories.objects.get(pk=pk)
+    except category.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    category.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@csrf_exempt
+@api_view(['PUT'])
+def update_category(request, pk):
+    try:
+        category = Categories.objects.get(pk=pk)
+    except category.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    serializer = CategoriesSerializer(category, data=request.data)
     if serializer.is_valid():
         serializer.save()
         return Response(status=status.HTTP_201_CREATED)

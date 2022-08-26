@@ -11,6 +11,7 @@ class Message(models.Model):
     date = models.DateTimeField()
 
 class Categories(models.Model):
+    category_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
     active = models.BooleanField()
 
