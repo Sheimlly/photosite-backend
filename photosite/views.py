@@ -1,6 +1,8 @@
 from rest_framework.response import Response
 from rest_framework import permissions, views, status
 
+import os
+from django.conf import settings
 
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
@@ -114,7 +116,7 @@ def delete_category(request, pk):
         category = Categories.objects.get(pk=pk)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    except category.DoesNotExist:
+    except:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
 @csrf_exempt
@@ -124,6 +126,55 @@ def update_category(request, pk):
         category = Categories.objects.get(pk=pk)
 
         serializer = CategoriesSerializer(category, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+
+# Handle offers
+@api_view(["GET"])
+@permission_classes((AllowAny,))
+def offers_list(request):
+    data = Offers.objects.all()
+
+    serializer = OffersSerializer(data, context={'request': request}, many=True)
+
+    return Response(serializer.data)
+
+@csrf_exempt
+@api_view(["POST"])
+def add_offer(request):
+    serializer = OffersSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['DELETE'])
+def delete_offer(request, pk):
+    try:
+        offer = Offers.objects.get(pk=pk)
+        print(offer.photo.path)
+        os.remove(offer.photo.path)
+        offer.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+@csrf_exempt
+@api_view(['PUT'])
+def update_offer(request, pk):
+    try:
+        offer = Offers.objects.get(pk=pk)
+
+        serializer = OffersSerializer(category, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_201_CREATED)

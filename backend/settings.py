@@ -138,3 +138,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # True when loclahost
 CORS_ORIGIN_ALLOW_ALL = True
+
+STATIC_ROOT = '/home/emilly/programming/photo_website/backend/resources/'
+MEDIA_URL = '/resources/'

@@ -16,3 +16,9 @@ class CategoriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categories 
         fields = ('category_id', 'name', 'active')
+
+class OffersSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Offers 
+        fields = ('offer_id', 'name', 'short_description', 'description', 'price', 'active', 'photo', 'frontpage')
