@@ -14,7 +14,10 @@ urlpatterns = [
     re_path(r'^api/login/$', views.login),
 
     re_path(r'^api/messages/$', views.messages_list),
+    re_path(r'^api/messages/(?P<pk>[0-9]+)$', views.message_details),
     re_path(r'^api/messages/add/$', views.add_message),
+    re_path(r'^api/messages/delete/(?P<pk>[0-9]+)$', views.message_delete),
+
     re_path(r'^api/categories/$', views.categories_list),
     re_path(r'^api/categories/delete/(?P<pk>[0-9]+)$', views.delete_category),
     re_path(r'^api/categories/update/(?P<pk>[0-9]+)$', views.update_category),

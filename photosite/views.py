@@ -15,8 +15,11 @@ from rest_framework.status import (
 
 import datetime
 
-from .models import Message
+from .models import *
 from .serializers import *
+
+# I know most of views could be done in one view but this is more readable for me
+# Maybe I will change it later
 
 # Get token
 @csrf_exempt
@@ -37,6 +40,7 @@ def login(request):
                     status=HTTP_200_OK)
 
 
+
 # Handle messages
 @api_view(['POST'])
 @permission_classes((AllowAny,))
@@ -44,7 +48,7 @@ def add_message(request):
     fixed_request_data = request.data.copy()
     fixed_request_data.update({'date': datetime.datetime.now()})
 
-    serializer = MessageSerializer(data=fixed_request_data)
+    serializer = MessagesSerializer(data=fixed_request_data)
     if serializer.is_valid():
         serializer.save()
         return Response(status=status.HTTP_201_CREATED)
@@ -54,22 +58,34 @@ def add_message(request):
 @csrf_exempt
 @api_view(['GET'])
 def messages_list(request):
-    data = Message.objects.all()
+    data = Messages.objects.all()
 
-    serializer = MessageSerializer(data, context={'request': request}, many=True)
+    serializer = MessagesSerializer(data, context={'request': request}, many=True)
 
     return Response(serializer.data)
 
 @csrf_exempt
-@api_view(['DELETE'])
-def messages_detail(request, pk):
+@api_view(['GET'])
+def message_details(request, pk):
     try:
-        message = Message.objects.get(pk=pk)
-    except message.DoesNotExist:
+        message = Messages.objects.get(pk=pk)
+        serializer = MessagesSerializer(message)
+        return Response(serializer.data)
+    except:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
-    message.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+@csrf_exempt
+@api_view(['DELETE'])
+def message_delete(request, pk):
+    try:
+        message = Messages.objects.get(pk=pk)
+
+        message.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+
 
 # Handle categories
 @api_view(["GET"])
@@ -96,23 +112,22 @@ def add_category(request):
 def delete_category(request, pk):
     try:
         category = Categories.objects.get(pk=pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     except category.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-
-    category.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
 
 @csrf_exempt
 @api_view(['PUT'])
 def update_category(request, pk):
     try:
         category = Categories.objects.get(pk=pk)
-    except category.DoesNotExist:
+
+        serializer = CategoriesSerializer(category, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except:
         return Response(status=status.HTTP_404_NOT_FOUND)
-
-    serializer = CategoriesSerializer(category, data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

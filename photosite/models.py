@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 
-class Message(models.Model):
+class Messages(models.Model):
     message_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
     phone = models.IntegerField(default=0)
@@ -16,13 +16,15 @@ class Categories(models.Model):
     active = models.BooleanField()
 
 class Photo(models.Model):
+    phoro_id = models.AutoField(primary_key=True)
     photo = models.ImageField(upload_to='resources/photos')
     portfolio = models.BooleanField()
     category = models.ForeignKey(Categories, on_delete=models.CASCADE)
 
 
 class Offer(models.Model):
-    offerName = models.CharField(max_length=100)
+    offer_id = models.AutoField(primary_key=True)
+    offer_name = models.CharField(max_length=100)
     price = models.IntegerField(default=0)
     active = models.BooleanField()
     photo = models.ForeignKey(Photo, on_delete=models.CASCADE)
