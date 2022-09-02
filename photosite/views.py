@@ -168,6 +168,15 @@ def delete_offer(request, pk):
     except:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+@api_view(["GET"])
+@permission_classes((AllowAny,))
+def offer_details(request, pk):
+    offer = Offers.objects.get(pk=pk)
+
+    serializer = OffersSerializer(offer, context={'request': request}, many=False)
+
+    return Response(serializer.data)
+
 @csrf_exempt
 @api_view(['PUT'])
 def update_offer(request, pk):

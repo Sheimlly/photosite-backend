@@ -25,6 +25,7 @@ urlpatterns = [
 
     # Offers
     re_path(r'^api/offers/$', views.offers_list),
+    re_path(r'^api/offers/(?P<pk>[0-9]+)$', views.offer_details),
     re_path(r'^api/offers/delete/(?P<pk>[0-9]+)$', views.delete_offer),
     re_path(r'^api/offers/update/(?P<pk>[0-9]+)$', views.update_offer),
     re_path(r'^api/offers/add/$', views.add_offer),
