@@ -1,0 +1,7 @@
+backend/.env
+backend/__pycache__
+photosite/__pycache__
+photosite/migrations
+db.sqlite3
+resources/
+del_script.sh

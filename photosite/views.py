@@ -1,14 +1,14 @@
-from rest_framework.response import Response
-from rest_framework import permissions, views, status
-
 import os
 from django.conf import settings
+from django.core.mail import send_mail
 
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
+from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.status import (
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
@@ -20,8 +20,6 @@ import datetime
 from .models import *
 from .serializers import *
 
-# I know most of views could be done in one view but this is more readable for me
-# Maybe I will change it later
 
 # Get token
 @csrf_exempt
@@ -44,6 +42,7 @@ def login(request):
 
 
 # Handle messages
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes((AllowAny,))
 def add_message(request):
@@ -51,143 +50,194 @@ def add_message(request):
     fixed_request_data.update({'date': datetime.datetime.now()})
 
     serializer = MessagesSerializer(data=fixed_request_data)
+    serializer = MessagesSerializer(data=fixed_request_data)
     if serializer.is_valid():
+        print(settings.EMAIL_HOST_USER)
+        phone = f"Nr. Telefonu: {request.data.get('phone')}" if request.data.get('phone') else ""
+        message = f"""
+            Imię: {request.data.get('name')}
+            Email: {request.data.get('email')}
+            {phone}
+            {request.data.get('message')}
+        """
+        send_mail(
+            subject='Wiadomość z formularza na stronie',
+            message=message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[settings.EMAIL_HOST_USER]
+        )
         serializer.save()
         return Response(status=status.HTTP_201_CREATED)
+
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
 @api_view(['GET'])
+@permission_classes((IsAuthenticated,))
 def messages_list(request):
-    data = Messages.objects.all()
+    data = Messages.objects.all().order_by("-message_id")
 
     serializer = MessagesSerializer(data, context={'request': request}, many=True)
 
     return Response(serializer.data)
 
 @csrf_exempt
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
+@permission_classes((IsAuthenticated,))
 def message_details(request, pk):
-    try:
-        message = Messages.objects.get(pk=pk)
+    if request.method == 'GET':
+        try:
+            message = Messages.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        message.readed=True
+        message.save()
+
         serializer = MessagesSerializer(message)
         return Response(serializer.data)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
 
-@csrf_exempt
-@api_view(['DELETE'])
-def message_delete(request, pk):
-    try:
-        message = Messages.objects.get(pk=pk)
+    if request.method == 'DELETE':
+        try:
+            message = Messages.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         message.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
 
 
 # Handle categories
-@api_view(["GET"])
-@permission_classes((AllowAny,))
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def categories_list(request):
-    data = Categories.objects.all()
+    if request.method == 'GET':
+        data = Categories.objects.all()
+        serializer = CategoriesSerializer(data, context={'request': request}, many=True)
+        return Response(serializer.data)
+    
+    if request.method == 'POST':
+        serializer = CategoriesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED)
 
-    serializer = CategoriesSerializer(data, context={'request': request}, many=True)
-
-    return Response(serializer.data)
-
-@csrf_exempt
-@api_view(["POST"])
-def add_category(request):
-    serializer = CategoriesSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
-@api_view(['DELETE'])
-def delete_category(request, pk):
-    try:
-        category = Categories.objects.get(pk=pk)
-        category.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@csrf_exempt
-@api_view(['PUT'])
-def update_category(request, pk):
-    try:
-        category = Categories.objects.get(pk=pk)
+@api_view(['PUT', 'DELETE'])
+@permission_classes((IsAuthenticated,))
+def edit_category(request, pk):
+    if request.method == 'PUT':
+        try:
+            category = Categories.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         serializer = CategoriesSerializer(category, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        try:
+            category = Categories.objects.get(pk=pk)
+            category.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+@csrf_exempt
+@api_view(['PUT', 'DELETE'])
+@permission_classes((IsAuthenticated,))
+def edit_category(request, pk):
+    if request.method == 'PUT':
+        try:
+            category = Categories.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CategoriesSerializer(category, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'DELETE':
+        try:
+            category = Categories.objects.get(pk=pk)
+            category.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 
 # Handle offers
-@api_view(["GET"])
-@permission_classes((AllowAny,))
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def offers_list(request):
-    data = Offers.objects.all()
+    if request.method == 'GET':
+        data = Offers.objects.all()
+        offer_serializer = OffersSerializer(data, context={'request': request}, many=True)
+        return Response(offer_serializer.data)
 
-    serializer = OffersSerializer(data, context={'request': request}, many=True)
+    if request.method == 'POST':
+        offer_serializer = OffersSerializer(data=request.data)
+        if offer_serializer.is_valid():
+            offer_serializer.save()
+            return Response(offer_serializer.data, status=status.HTTP_201_CREATED)
 
-    return Response(serializer.data)
-
-@csrf_exempt
-@api_view(["POST"])
-def add_offer(request):
-    serializer = OffersSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(offer_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
-@api_view(['DELETE'])
-def delete_offer(request, pk):
-    try:
-        offer = Offers.objects.get(pk=pk)
-        print(offer.photo.path)
-        os.remove(offer.photo.path)
-        offer.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@api_view(["GET"])
-@permission_classes((AllowAny,))
+@api_view(['GET', 'DELETE', 'PUT', 'PATCH'])
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def offer_details(request, pk):
-    offer = Offers.objects.get(pk=pk)
+    if request.method == 'GET':
+        try: offer = Offers.objects.get(pk=pk)
+        except: return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = OffersSerializer(offer, context={'request': request}, many=False)
+        return Response(serializer.data)
 
-    serializer = OffersSerializer(offer, context={'request': request}, many=False)
+    if request.method == 'DELETE':
+        try:
+            offer = Offers.objects.get(pk=pk)
+            if(offer.photo): os.remove(offer.photo.path)
+            offer.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-    return Response(serializer.data)
+    if request.method == 'PUT':
+        try:
+            offer = Offers.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-@csrf_exempt
-@api_view(['PUT'])
-def update_offer(request, pk):
-    try:
-        offer = Offers.objects.get(pk=pk)
-
-        serializer = OffersSerializer(category, data=request.data)
+        serializer = OffersSerializer(offer, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    elif request.method == 'PATCH':
+        try:
+            offer = Offers.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = OffersSerializer(offer, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
